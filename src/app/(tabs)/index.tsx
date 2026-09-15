@@ -3,17 +3,18 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
 
 import { getProducts, searchProducts } from "../../data/productApi";
 
 import { Product } from "../../types/Product";
+
+import ProductImage from "../../components/ProductImage";
 
 const PAGE_SIZE = 20;
 
@@ -30,6 +31,8 @@ export default function Index() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadProducts = async () => {
     try {
@@ -79,6 +82,27 @@ export default function Index() {
       setLoadMoreError(true);
     } finally {
       setLoadingMore(false);
+    }
+  };
+
+  const refreshProducts = async () => {
+    try {
+      setRefreshing(true);
+
+      let data;
+
+      if (debouncedQuery) {
+        data = await searchProducts(debouncedQuery, PAGE_SIZE, 0);
+      } else {
+        data = await getProducts(PAGE_SIZE, 0);
+      }
+
+      setProducts(data.products);
+      setTotal(data.total);
+    } catch (err) {
+      console.log("Refresh failed:", err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -148,6 +172,8 @@ export default function Index() {
           data={products}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
+          refreshing={refreshing}
+          onRefresh={refreshProducts}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <Pressable
@@ -161,10 +187,7 @@ export default function Index() {
                 })
               }
             >
-              <Image
-                source={{ uri: item.thumbnail }}
-                style={styles.productImage}
-              />
+              <ProductImage uri={item.thumbnail} style={styles.productImage} />
 
               <View style={styles.productInfo}>
                 <Text style={styles.productTitle} numberOfLines={2}>
