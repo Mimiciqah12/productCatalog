@@ -7,16 +7,19 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
-import { getProducts } from "../../data/productApi";
+import { getProducts, searchProducts } from "../../data/productApi";
+
 import { Product } from "../../types/Product";
 
 const PAGE_SIZE = 20;
 
 export default function Index() {
   const [products, setProducts] = useState<Product[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -25,12 +28,21 @@ export default function Index() {
 
   const [total, setTotal] = useState(0);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
   const loadProducts = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const data = await getProducts(PAGE_SIZE, 0);
+      let data;
+
+      if (debouncedQuery) {
+        data = await searchProducts(debouncedQuery, PAGE_SIZE, 0);
+      } else {
+        data = await getProducts(PAGE_SIZE, 0);
+      }
 
       setProducts(data.products);
       setTotal(data.total);
@@ -52,7 +64,13 @@ export default function Index() {
 
       const nextSkip = products.length;
 
-      const data = await getProducts(PAGE_SIZE, nextSkip);
+      let data;
+
+      if (debouncedQuery) {
+        data = await searchProducts(debouncedQuery, PAGE_SIZE, nextSkip);
+      } else {
+        data = await getProducts(PAGE_SIZE, nextSkip);
+      }
 
       setProducts((currentProducts) => [...currentProducts, ...data.products]);
 
@@ -65,8 +83,18 @@ export default function Index() {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  useEffect(() => {
     loadProducts();
-  }, []);
+  }, [debouncedQuery]);
 
   if (loading) {
     return (
@@ -92,81 +120,91 @@ export default function Index() {
     );
   }
 
-  if (products.length === 0) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyTitle}>No products found</Text>
-
-        <Text style={styles.stateText}>
-          There are currently no products to display.
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Product Catalog</Text>
 
       <Text style={styles.subtitle}>Discover our products</Text>
 
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() =>
-              router.push({
-                pathname: "/product/[id]",
-                params: {
-                  id: item.id.toString(),
-                },
-              })
-            }
-          >
-            <Image
-              source={{ uri: item.thumbnail }}
-              style={styles.productImage}
-            />
-
-            <View style={styles.productInfo}>
-              <Text style={styles.productTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-
-              <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
-            </View>
-          </Pressable>
-        )}
-        onEndReached={loadMoreProducts}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.footer}>
-              <ActivityIndicator />
-
-              <Text style={styles.footerText}>Loading more products...</Text>
-            </View>
-          ) : loadMoreError ? (
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Unable to load more products.
-              </Text>
-
-              <Pressable
-                style={styles.smallRetryButton}
-                onPress={loadMoreProducts}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </Pressable>
-            </View>
-          ) : products.length >= total ? (
-            <Text style={styles.endText}>You have reached the end.</Text>
-          ) : null
-        }
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search products..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
       />
+
+      {products.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No products found</Text>
+
+          <Text style={styles.stateText}>
+            {debouncedQuery
+              ? `No results for "${debouncedQuery}".`
+              : "There are currently no products to display."}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.card}
+              onPress={() =>
+                router.push({
+                  pathname: "/product/[id]",
+                  params: {
+                    id: item.id.toString(),
+                  },
+                })
+              }
+            >
+              <Image
+                source={{ uri: item.thumbnail }}
+                style={styles.productImage}
+              />
+
+              <View style={styles.productInfo}>
+                <Text style={styles.productTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+
+                <Text style={styles.productPrice}>
+                  ${item.price.toFixed(2)}
+                </Text>
+              </View>
+            </Pressable>
+          )}
+          onEndReached={loadMoreProducts}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footer}>
+                <ActivityIndicator />
+
+                <Text style={styles.footerText}>Loading more products...</Text>
+              </View>
+            ) : loadMoreError ? (
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                  Unable to load more products.
+                </Text>
+
+                <Pressable
+                  style={styles.smallRetryButton}
+                  onPress={loadMoreProducts}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </Pressable>
+              </View>
+            ) : products.length >= total ? (
+              <Text style={styles.endText}>You have reached the end.</Text>
+            ) : null
+          }
+        />
+      )}
     </View>
   );
 }
@@ -189,6 +227,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 4,
     marginBottom: 16,
+  },
+
+  searchInput: {
+    backgroundColor: "#ffffff",
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#dddddd",
+    fontSize: 16,
   },
 
   list: {
@@ -234,6 +284,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 24,
     backgroundColor: "#f5f5f5",
+  },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
   },
 
   stateText: {

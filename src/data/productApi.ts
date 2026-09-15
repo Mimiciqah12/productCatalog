@@ -38,9 +38,13 @@ export async function getProductById(id: number): Promise<Product> {
   return data;
 }
 
-export async function searchProducts(query: string): Promise<ProductResponse> {
+export async function searchProducts(
+  query: string,
+  limit: number = 20,
+  skip: number = 0,
+): Promise<ProductResponse> {
   const response = await fetch(
-    `${BASE_URL}/products/search?q=${encodeURIComponent(query)}`,
+    `${BASE_URL}/products/search?q=${encodeURIComponent(query)}&limit=${limit}&skip=${skip}`,
   );
 
   if (!response.ok) {
