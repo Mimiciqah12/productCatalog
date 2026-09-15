@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,8 +10,8 @@ import {
   View,
 } from "react-native";
 
-import { getProducts } from "../data/productApi";
-import { Product } from "../types/Product";
+import { getProducts } from "@/data/productApi";
+import { Product } from "@/types/Product";
 
 export default function Index() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -83,7 +84,17 @@ export default function Index() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <Pressable
+            style={styles.card}
+            onPress={() => {
+              console.log("Product clicked:", item.id);
+
+              router.push({
+                pathname: "/product/[id]",
+                params: { id: item.id.toString() },
+              });
+            }}
+          >
             <Image
               source={{ uri: item.thumbnail }}
               style={styles.productImage}
@@ -96,7 +107,7 @@ export default function Index() {
 
               <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
             </View>
-          </View>
+          </Pressable>
         )}
       />
     </View>
