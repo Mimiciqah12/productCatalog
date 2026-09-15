@@ -10,26 +10,57 @@ import {
   View,
 } from "react-native";
 
-import { getProducts } from "@/data/productApi";
-import { Product } from "@/types/Product";
+import { getProducts } from "../../data/productApi";
+import { Product } from "../../types/Product";
+
+const PAGE_SIZE = 20;
 
 export default function Index() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+
+  const [total, setTotal] = useState(0);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const data = await getProducts();
+      const data = await getProducts(PAGE_SIZE, 0);
 
       setProducts(data.products);
+      setTotal(data.total);
     } catch (err) {
       setError("Unable to load products. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreProducts = async () => {
+    if (loading || loadingMore || products.length >= total) {
+      return;
+    }
+
+    try {
+      setLoadingMore(true);
+      setLoadMoreError(false);
+
+      const nextSkip = products.length;
+
+      const data = await getProducts(PAGE_SIZE, nextSkip);
+
+      setProducts((currentProducts) => [...currentProducts, ...data.products]);
+
+      setTotal(data.total);
+    } catch (err) {
+      setLoadMoreError(true);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -86,14 +117,14 @@ export default function Index() {
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
-            onPress={() => {
-              console.log("Product clicked:", item.id);
-
+            onPress={() =>
               router.push({
                 pathname: "/product/[id]",
-                params: { id: item.id.toString() },
-              });
-            }}
+                params: {
+                  id: item.id.toString(),
+                },
+              })
+            }
           >
             <Image
               source={{ uri: item.thumbnail }}
@@ -109,6 +140,32 @@ export default function Index() {
             </View>
           </Pressable>
         )}
+        onEndReached={loadMoreProducts}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.footer}>
+              <ActivityIndicator />
+
+              <Text style={styles.footerText}>Loading more products...</Text>
+            </View>
+          ) : loadMoreError ? (
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                Unable to load more products.
+              </Text>
+
+              <Pressable
+                style={styles.smallRetryButton}
+                onPress={loadMoreProducts}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </Pressable>
+            </View>
+          ) : products.length >= total ? (
+            <Text style={styles.endText}>You have reached the end.</Text>
+          ) : null
+        }
       />
     </View>
   );
@@ -136,7 +193,7 @@ const styles = StyleSheet.create({
 
   list: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
 
   card: {
@@ -203,8 +260,32 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
+  smallRetryButton: {
+    marginTop: 10,
+    backgroundColor: "#222222",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+
   retryButtonText: {
     color: "#ffffff",
     fontWeight: "bold",
+  },
+
+  footer: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+
+  footerText: {
+    marginTop: 8,
+    fontSize: 14,
+  },
+
+  endText: {
+    textAlign: "center",
+    paddingVertical: 20,
+    fontSize: 14,
   },
 });
