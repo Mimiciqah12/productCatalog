@@ -1,56 +1,103 @@
-# Welcome to your Expo app 👋
+﻿# Product Catalog App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native app built for the **Neurogine Junior Mobile Developer technical assessment**. Browse products, search the catalog, and view product details using the DummyJSON API.
 
-## Get started
+## Features
 
-1. Install dependencies
+- Product list with thumbnails, titles, and prices
+- Product details with images, price, rating, and description
+- Infinite scrolling with 20 products per page
+- Server-side search with a 500 ms debounce
+- Pull-to-refresh
+- Loading indicators, error messages, empty states, and retry actions
+- Image loading indicators and fallback handling
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-2. Start the app
+- **React Native** — mobile UI
+- **Expo SDK 57** — development tooling
+- **TypeScript** — type checking
+- **Expo Router** — navigation
+- **DummyJSON API** — product data
 
-   ```bash
-   npx expo start
-   ```
+## Getting Started
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+From the project folder, install dependencies and start the development server:
 
 ```bash
-npm run reset-project
+npm install
+npm start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Useful Commands
 
-### Other setup steps
+| Command | Purpose |
+| --- | --- |
+| `npm start` | Start the Expo development server |
+| `npm run android` | Start Expo and open Android |
+| `npm run ios` | Start Expo and open the iOS Simulator |
+| `npm run web` | Start Expo for web |
+| `npx tsc --noEmit` | Check TypeScript types |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Project Structure
 
-## Learn more
+```text
+src/
+├── app/
+│   ├── _layout.tsx          # Root stack navigator
+│   ├── (tabs)/
+│   │   ├── _layout.tsx      # Tab navigation
+│   │   ├── index.tsx        # Product list, search, and pagination
+│   │   └── explore.tsx      # Expo starter Explore screen
+│   └── product/
+│       └── [id].tsx         # Product details
+├── components/
+│   └── ProductImage.tsx     # Image loading and fallback handling
+├── data/
+│   └── productApi.ts        # Product API requests
+└── types/
+    └── Product.ts          # Shared product type
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+The project uses a simple layered structure: screens manage UI and screen state, reusable components handle shared presentation, and `productApi.ts` handles API requests. Local React state keeps the implementation small without adding a separate state-management library.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## API Endpoints
 
-## Join the community
+The app makes these requests to DummyJSON:
 
-Join our community of developers creating universal apps.
+```text
+GET https://dummyjson.com/products?limit=20&skip=0
+GET https://dummyjson.com/products/{id}
+GET https://dummyjson.com/products/search?q={query}&limit=20&skip=0
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Search
+
+Search waits 500 ms after the user stops typing before sending a request. It runs on the server so results can include products that have not yet been loaded into the list.
+
+### Pagination
+
+The app requests 20 products at a time for both browsing and search. The number of loaded products becomes the next `skip` value. New results are appended to the list, and loading stops when the API's total has been reached.
+
+### Navigation
+
+Home and Explore sit inside a tab navigator. A root stack contains both the tabs and the product detail screen, allowing a product tap to open `/product/{id}` and the Back action to return to the list.
+
+## Future Improvements
+
+Development focused on the assessment requirements within the available time. Future improvements include:
+
+- Unit tests
+- Improved accessibility
+- Better image caching
+- Further UI polish
+
+## AI Assistance
+
+AI tools were used for learning, guidance, troubleshooting, and reviewing implementation ideas.
+
+I reviewed and studied the final code so that I can explain the application flow, pagination, search, API handling, navigation, and architecture.
+
+## Author
+
+Nur Faqihah
